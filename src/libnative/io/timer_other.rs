@@ -145,7 +145,7 @@ fn helper(input: libc::c_int, messages: Receiver<Req>) {
             // The actual timeout listed in the requests array is an
             // absolute date, so here we translate the absolute time to a
             // relative time.
-            let tm = active[0].target - now;
+            let tm = active.get(0).target - now;
             timeout.tv_sec = (tm / 1000) as libc::time_t;
             timeout.tv_usec = ((tm % 1000) * 1000) as libc::suseconds_t;
             &timeout as *libc::timeval
