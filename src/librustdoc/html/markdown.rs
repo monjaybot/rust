@@ -133,7 +133,7 @@ pub fn render(w: &mut io::Writer, s: &str, print_toc: bool) -> fmt::Result {
             slice::raw::buf_as_slice((*text).data, (*text).size as uint, |text| {
                 let text = str::from_utf8(text).unwrap();
                 let mut lines = text.lines().filter(|l| stripped_filtered_line(*l).is_none());
-                let text = lines.collect::<~[&str]>().connect("\n");
+                let text = lines.collect::<Vec<&str>>().connect("\n");
 
                 let buf = buf {
                     data: text.as_bytes().as_ptr(),
