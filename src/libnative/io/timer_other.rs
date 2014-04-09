@@ -114,7 +114,7 @@ fn helper(input: libc::c_int, messages: Receiver<Req>) {
     }
 
     // signals the first requests in the queue, possible re-enqueueing it.
-    fn signal(active: &mut Vec<Inner>, dead: &mut Vec<(uint, ~Inner)>) {
+    fn signal(active: &mut Vec<~Inner>, dead: &mut Vec<(uint, ~Inner)>) {
         let mut timer = match active.shift() {
             Some(timer) => timer, None => return
         };
