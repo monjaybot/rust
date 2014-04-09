@@ -49,6 +49,7 @@ use path::{Path, GenericPath};
 use iter::Iterator;
 use slice::{Vector, CloneableVector, ImmutableVector, MutableVector, OwnedVector};
 use ptr::RawPtr;
+use vec::Vec;
 
 #[cfg(unix)]
 use c_str::ToCStr;
@@ -169,7 +170,7 @@ fn with_env_lock<T>(f: || -> T) -> T {
 ///
 /// Invalid UTF-8 bytes are replaced with \uFFFD. See `str::from_utf8_lossy()`
 /// for details.
-pub fn env() -> ~[(~str,~str)] {
+pub fn env() -> Vec<(~str,~str)> {
     env_as_bytes().move_iter().map(|(k,v)| {
         let k = str::from_utf8_lossy(k).into_owned();
         let v = str::from_utf8_lossy(v).into_owned();
@@ -179,10 +180,10 @@ pub fn env() -> ~[(~str,~str)] {
 
 /// Returns a vector of (variable, value) byte-vector pairs for all the
 /// environment variables of the current process.
-pub fn env_as_bytes() -> ~[(~[u8],~[u8])] {
+pub fn env_as_bytes() -> Vec<(~[u8],~[u8])> {
     unsafe {
         #[cfg(windows)]
-        unsafe fn get_env_pairs() -> ~[~[u8]] {
+        unsafe fn get_env_pairs() -> Vec<~[u8]> {
             use c_str;
             use str::StrSlice;
 
@@ -195,7 +196,7 @@ pub fn env_as_bytes() -> ~[(~[u8],~[u8])] {
                 fail!("os::env() failure getting env string from OS: {}",
                        os::last_os_error());
             }
-            let mut result = ~[];
+            let mut result = vec!();
             c_str::from_c_multistring(ch as *c_char, None, |cstr| {
                 result.push(cstr.as_bytes_no_nul().to_owned());
             });
@@ -203,7 +204,7 @@ pub fn env_as_bytes() -> ~[(~[u8],~[u8])] {
             result
         }
         #[cfg(unix)]
-        unsafe fn get_env_pairs() -> ~[~[u8]] {
+        unsafe fn get_env_pairs() -> Vec<~[u8]> {
             use c_str::CString;
 
             extern {
@@ -214,7 +215,7 @@ pub fn env_as_bytes() -> ~[(~[u8],~[u8])] {
                 fail!("os::env() failure getting env string from OS: {}",
                        os::last_os_error());
             }
-            let mut result = ~[];
+            let mut result = vec!();
             ptr::array_each(environ, |e| {
                 let env_pair = CString::new(e, false).as_bytes_no_nul().to_owned();
                 result.push(env_pair);
@@ -222,15 +223,13 @@ pub fn env_as_bytes() -> ~[(~[u8],~[u8])] {
             result
         }
 
-        fn env_convert(input: ~[~[u8]]) -> ~[(~[u8], ~[u8])] {
-            let mut pairs = ~[];
-            for p in input.iter() {
-                let vs: ~[&[u8]] = p.splitn(1, |b| *b == '=' as u8).collect();
-                let key = vs[0].to_owned();
-                let val = if vs.len() < 2 { ~[] } else { vs[1].to_owned() };
-                pairs.push((key, val));
-            }
-            pairs
+        fn env_convert(input: Vec<~[u8]>) -> Vec<(~[u8], ~[u8])> {
+            input.iter().map(|p| {
+                let mut it = p.splitn(1, |b| *b == '=' as u8);
+                let key = it.next().unwrap().to_owned();
+                let val = it.next().map(|v| v.to_owned()).unwrap_or_else(|| ~[]);
+                (key, val)
+            }).collect()
         }
         with_env_lock(|| {
             let unparsed_environ = get_env_pairs();
@@ -1625,10 +1624,10 @@ mod tests {
 
         let mut e = env();
         setenv(n, "VALUE");
-        assert!(!e.contains(&(n.clone(), ~"VALUE")));
+        assert!(!e.as_slice().contains(&(n.clone(), ~"VALUE")));
 
         e = env();
-        assert!(e.contains(&(n, ~"VALUE")));
+        assert!(e.as_slice().contains(&(n, ~"VALUE")));
     }
 
     #[test]
